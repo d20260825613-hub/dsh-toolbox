@@ -1,0 +1,1 @@
+Verify a directory against a checksum manifest. Distinguishes changed from missing from extra from touched, and reads the sha256sum text format. Zero dependencies.

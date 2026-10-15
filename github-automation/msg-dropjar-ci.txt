@@ -1,0 +1,30 @@
+fix(ci): make the packaged-install and smoke checks path-safe
+
+The Windows `package` job failed with `ENOENT ... start.json`, which reads as a
+server that never started. It was not: the wait loop was bash, and Git Bash and
+Node disagree about what `/tmp/...` means on Windows. `mktemp -d` returns
+`/tmp/tmp.XXXX`, bash writes to the MSYS temp directory, and Node resolves the
+same string to `D:\tmp\tmp.XXXX`. The server was running the whole time; the
+check looked in the wrong place.
+
+Both of the places that mixed bash and Node are now single Node processes with
+one notion of where the files are:
+
+- `scripts/smoke-server.js` starts the server, waits for its JSON banner,
+  runs the end-to-end checks against the real port, and shuts it down.
+- `scripts/verify-install.js` runs the *installed* package, then drives it over
+  HTTP: version, help, serve a page, upload a file, and confirm the file landed
+  in the directory that was asked for.
+
+The install check runs the installed entry point rather than the command shim,
+and that deserves an explanation because it is a deliberate trade. Three
+attempts at executing a `.cmd` whose path contains spaces all failed the same
+way ("is not recognized as an internal or external command"): Node re-quotes the
+`/c` argument for `spawn('cmd', ['/c', '"<path>" args'])`, and wrapping the whole
+command once instead makes cmd strip the wrong pair. Running the entry point
+with the interpreter avoids the tar pit and actually tests more of what ships —
+the real `bin/dropjar.js` and the whole `src/` tree out of the installed prefix.
+The shim's existence is still asserted, so a broken `bin` field is caught.
+
+Verified locally on Windows: 84 unit tests, the QR verifier, the server smoke
+(e2e all passing) and the packaged install (9/9).

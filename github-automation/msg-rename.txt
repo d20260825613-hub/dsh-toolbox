@@ -1,0 +1,21 @@
+chore(home): 站点名改为「d20260825613-hub 的个人博客」，头像改为本地文件
+
+按要求改三处，其余（首页布局、深色 UI、背景图、项目卡片、导航栏）一律未动。
+
+- 站名：data/home.yaml 的 profile.name 与 hugo.yaml 的 title 同步改为
+  「d20260825613-hub 的个人博客」—— 两处都要改，因为首屏大标题取自前者，
+  而导航栏与 RSS/sitemap 的站点名取自后者。
+- 简介：改成大白话，「平时写写代码，记录一些学习和折腾过程里的笔记，
+  想到什么就更新什么。」，去掉了原先偏工具介绍的写法。
+- 头像：新增 scripts/fetch-avatar.js，把 GitHub 头像下载到 static/img/avatar.png
+  本地加载，不再依赖外链。外链不只是隐私问题 —— 国内访问 githubusercontent 经常
+  超时，头像会变成破图。脚本走 _tools/gh-tunnel.js 的代理隧道（本机 hosts 把
+  github.com 全系域名指向 127.0.0.1 且无直连出口），手动跟随 302 到
+  avatars.githubusercontent.com，按文件头校验确实是图片再落盘。
+
+一个实测细节记一下：GitHub 的 `<user>.png` 端点实际返回的是 **JPEG**（首字节
+ffd8ff），不是 PNG。脚本最初只认 PNG 魔数，于是把一张正常头像判成了"不是图片"。
+现在按魔数识别 PNG/JPEG/WebP/GIF 并如实报告格式，文件名仍按需求用 avatar.png
+（浏览器按内容嗅探，扩展名不影响显示）。
+
+头像换法：node scripts/fetch-avatar.js <用户名> 512

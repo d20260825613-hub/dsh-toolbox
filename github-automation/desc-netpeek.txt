@@ -1,0 +1,1 @@
+Zero-dependency CLI that scans a LAN and tells you what is actually there: live hosts, open TCP ports, and the vendor behind each MAC address. No admin rights, no Npcap, no Nmap-sized footprint.

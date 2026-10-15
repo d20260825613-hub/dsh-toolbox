@@ -1,0 +1,24 @@
+fix(ci): resolve the installed package root instead of assuming node_modules
+
+The previous commit found the POSIX command shim but the job still failed on
+ubuntu and macOS, now with `abort ENOENT: ... /prefix/node_modules/spacehog/bin/spacehog.js`.
+
+Both platforms lay a global prefix out differently, and only Windows matched
+what the script assumed:
+
+  Windows  <prefix>\node_modules\spacehog\      and <prefix>\spacehog.cmd
+  POSIX    <prefix>/lib/node_modules/spacehog/  and <prefix>/bin/spacehog
+
+Finding the shim was only half the fix: two later checks built their paths from
+`<prefix>/node_modules/spacehog` again — the executable-bit assertion and the
+library-import assertion — so they looked in a directory that does not exist on
+POSIX. `fs.statSync` on it threw, which aborted the run through the catch block;
+that is why the log showed "1 problem(s)" without ever printing a FAIL line.
+
+The package directory is now resolved from whichever layout exists
+(`packageRoots()` / `installedPackageRoot()`) and every later path is derived
+from it, so a third layout would be one list entry rather than three edits.
+
+Also worth recording: neither fault was reachable from Windows, and the local
+run passed both before and after. The three-platform `package` job is what
+caught them, which is the entire reason it exists.

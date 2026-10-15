@@ -1,0 +1,17 @@
+# Hugo build output
+public/
+resources/_gen/
+.hugo_build.lock
+
+# Theme is a git submodule: keep only the pointer
+themes/PaperMod/
+
+# wrangler local cache
+.wrangler/
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

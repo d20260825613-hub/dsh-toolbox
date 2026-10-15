@@ -1,0 +1,1 @@
+Query JSON Lines files that are too big to open: filter, count, group and summarise by streaming. Hand-written expression parser, never eval. Zero dependencies.

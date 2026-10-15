@@ -1,0 +1,1 @@
+Zero-dependency CLI that turns a folder into a local web page for moving files between devices on one Wi-Fi: scan the QR code from a phone, then both sides send and receive. No account, no cloud, no cable.

@@ -1,0 +1,18 @@
+feat(comments): 实现 giscus 评论组件（PaperMod 自带的是空占位）
+
+PaperMod 的 layouts/_partials/comments.html 只有三行注释，是留给使用者的空壳，
+任何评论系统都要自己实现。这里在**项目**的 layouts/_partials/ 下放同名文件覆盖它，
+不动 themes/ 下任何东西 —— 主题升级不会与定制冲突（Hugo 查找顺序是项目优先）。
+
+实现要点：
+- 参数取自 hugo.yaml 的 params.giscus；两个 ID 都配置了才渲染，否则整块不输出。
+  这样在 giscus App 尚未安装时，页面只是没有评论区，而不是留一个加载失败的空白框。
+- 主题同步：PaperMod 的明暗切换是给 <html> 加 class，而 giscus 的 iframe 不会自己
+  跟着变。这里用 MutationObserver 监听 <html> 的 class 变化，通过 postMessage 把
+  dark/light 推给 giscus，避免切主题后评论区配色不一致。
+- 加 <noscript> 提示，说明需要 JavaScript 与 GitHub 账号。
+
+渲染验证：三篇文章页都含 giscus.app/client.js 且 ID 正确；首页、about、search
+均不包含（那几页 comments: false）。
+
+注：giscus App 需要在该账号上安装一次，否则评论框不会出现。

@@ -1,0 +1,25 @@
+feat: 初始化博客站点（Hugo + PaperMod + Actions 自动部署）
+
+从零搭起个人静态博客，本地写 Markdown、push 后由 GitHub Actions 构建并发布到
+GitHub Pages，零服务器、零费用、无需任何自定义 Secret。
+
+站点：
+- 栏目分为 posts（长文）/ notes（短命令速查与读书笔记）/ projects（自维护工具索引）
+- about、archives、tags、search 四个基础页
+- 亮/暗双主题：defaultTheme=auto 跟随系统，右上角可切换并记住选择
+- 站内搜索：构建时输出 index.json，浏览器端 Fuse.js 模糊匹配，零后端
+- 评论：giscus（GitHub Discussions 驱动），两个 ID 待安装 App 后回填
+
+流水线（.github/workflows/deploy.yml）：
+- 触发：push main / 手动
+- Hugo 版本钉死 0.166.0，避免小版本差异让线上构建不可复现
+- baseURL 取自 actions/configure-pages 的输出，换域名时不需要改配置
+- 构建后校验 index.html 与 index.json 都存在（后者缺失等于搜索静默失效）
+- 权限仅 pages:write + id-token:write，不使用任何自定义 Secret
+
+主题选择上有一个坑值得记下来：PaperMod 的 v8.0 tag 发布于 2024-11，与 Hugo 0.158+
+不兼容 —— Hugo 从 0.158 起废弃了带 `partials/` 前缀的 partial 调用，v8.0 会直接
+构建失败。这里改用 master 上钉死的 commit d3768854d0，并把主题 vendor 进仓库而不是
+用 submodule，这样 CI 少一次网络 checkout、升级也有可 review 的 diff。
+
+本地验证：hugo --gc --minify 通过，产出 47 页 / 68 个文件，index.json 含 5 条记录。

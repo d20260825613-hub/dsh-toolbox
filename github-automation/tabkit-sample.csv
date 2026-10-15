@@ -1,0 +1,8 @@
+region,product,units,unit_price,status,note
+EU,Widget,120,9.99,open,
+APAC,"Gadget, large",45,149.50,open,needs customs form
+EU,Widget,80,9.99,closed,
+US,"Thing ""Pro""",300,19.95,open,
+APAC,Widget,15,9.99,open,
+EU,Gadget,60,149.50,closed,discontinued
+US,Widget,0,9.99,open,free sample

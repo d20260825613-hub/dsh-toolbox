@@ -1,0 +1,23 @@
+fix(ci): find the installed command on POSIX, not only on Windows
+
+The new package job failed on ubuntu-latest with "the installed package
+exposes a spacehog command" while the identical job passed on Windows. The
+install itself was fine — npm pack, the global install and the tarball checks
+all passed — the check was looking in the wrong place.
+
+`installedBin()` listed only the Windows global-prefix layout. `npm install
+--global --prefix <p>` resolves the command differently per platform:
+
+  Windows  <prefix>\spacehog.cmd   (plus a bare `spacehog`)
+  POSIX    <prefix>/bin/spacehog   (a symlink into node_modules)
+
+so on Linux none of the candidates existed. The POSIX path is now checked, and
+the failure message names the two paths that were tried instead of only the
+prefix, so the next person sees the platform difference rather than the word
+"looked in".
+
+This is precisely what the job was added for: the local Windows run could never
+have caught it. It also means the earlier claim that verify:package was "12/12"
+was only ever true on one platform.
+
+verify:package 12/12 on Windows; the Ubuntu and macOS jobs are the real check.

@@ -1,0 +1,1 @@
+Zero-dependency CLI for the tables that pile up in real work: peek at a CSV's columns, convert between CSV/TSV/JSON/JSONL/Markdown, and filter rows with a small expression language that never touches eval.

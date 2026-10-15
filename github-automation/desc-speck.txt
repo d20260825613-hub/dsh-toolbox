@@ -1,0 +1,1 @@
+Identify a file from its bytes, not its extension, and report what is hidden: appended data after IEND or a ZIP directory, embedded script tags, a name that disagrees with the contents, near-maximum entropy.
