@@ -52,6 +52,7 @@ $attempts = if ($env:GIT_RETRIES) { [int]$env:GIT_RETRIES } else { 8 }
 
 $common = @(
   '-c', 'http.proxy=http://127.0.0.1:7897',
+  '-c', 'http.sslBackend=openssl',
   '-c', 'http.version=HTTP/1.1',
   '-c', 'credential.helper=',
   '-c', "credential.helper=$helper"

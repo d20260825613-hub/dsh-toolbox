@@ -182,20 +182,27 @@ $deployLog = ''
 if (Test-Path -LiteralPath $outFile) { $deployLog = (Get-Content -Raw -LiteralPath $outFile) }
 
 if ($deployExit -ne 0) {
-    Write-Host ''
-    Write-Err2 ("Upload failed (wrangler exit code $deployExit).")
-    if ($deployLog -match 'not authenticated|wrangler login') {
-        Write-Host '  -> Run once: wrangler login' -ForegroundColor Yellow
+    # The temp file is only a place to read wrangler's output back from; deleting
+    # it on every exit keeps %TEMP% from filling up one file per deploy.
+    try {
+        Write-Host ''
+        Write-Err2 ("Upload failed (wrangler exit code $deployExit).")
+        if ($deployLog -match 'not authenticated|wrangler login') {
+            Write-Host '  -> Run once: wrangler login' -ForegroundColor Yellow
+        }
+        if ($deployLog -match 'already exists|duplicate|taken|not available') {
+            Write-Host '  -> Project name may be taken or invalid. Edit "name" in wrangler.toml and retry.' -ForegroundColor Yellow
+        }
+        if ($deployLog -match 'A project with this name does not exist') {
+            Write-Host ('  -> Create it first: wrangler pages project create ' + $projectName) -ForegroundColor Yellow
+        }
+        Write-Host ''
+    } finally {
+        Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue
     }
-    if ($deployLog -match 'already exists|duplicate|taken|not available') {
-        Write-Host '  -> Project name may be taken or invalid. Edit "name" in wrangler.toml and retry.' -ForegroundColor Yellow
-    }
-    if ($deployLog -match 'A project with this name does not exist') {
-        Write-Host ('  -> Create it first: wrangler pages project create ' + $projectName) -ForegroundColor Yellow
-    }
-    Write-Host ''
     exit 1
 }
+Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue
 
 # ---------------------------------------------------------------------
 # 5. result

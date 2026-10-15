@@ -1,43 +1,72 @@
+// Frame-by-frame diagnostic for a multi-frame zstd file.
+//
+// Usage:
+//   node zframes.mjs <file.zstd> [outFile] [-o outFile]
+//
+// Frame boundaries come from the decoder's own consumed-byte count, NOT from
+// scanning for the 0x28B52FFD magic: the same four bytes also occur inside
+// compressed blocks, and treating one of those as the next frame start cut the
+// output short while still exiting 0. The magic count is still printed, because
+// a mismatch between it and the real frame count is worth knowing about.
 import fs from 'node:fs';
-import zlib from 'node:zlib';
+import { ZSTD_MAGIC, decodeZstdFrames, requireFileBuffer, takeOutOption, UsageError, ZstdFrameError } from './zstd-frames.mjs';
 
-const file = process.argv[2];
-const buf = fs.readFileSync(file);
-const magic = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
-let idx = [];
-let i = 0;
-while (true) {
-  i = buf.indexOf(magic, i);
-  if (i < 0) break;
-  idx.push(i);
-  i += 4;
+function usage(message) {
+  console.error(message ? `error: ${message}` : '');
+  console.error('usage: node zframes.mjs <file.zstd> [outFile] [-o outFile] [--allow-partial]');
+  process.exit(2);
 }
-console.log('file size', buf.length, 'magic count', idx.length, 'first offsets', idx.slice(0, 10));
 
-// try decompressing frame by frame sequentially using zstdDecompressSync on slices
-let offset = 0;
-let frames = 0;
-let total = 0;
-const chunks = [];
-while (offset < buf.length) {
-  try {
-    const out = zlib.zstdDecompressSync(buf.subarray(offset));
-    chunks.push(out);
-    total += out.length;
-    frames++;
-    // find the offset of the next magic after this frame start
-    const next = idx.find((p) => p > offset);
-    if (next === undefined) break;
-    offset = next;
-    if (frames > 5000) break;
-  } catch (e) {
-    console.log('stopped at offset', offset, e.message);
-    break;
+try {
+  const argv = process.argv.slice(2);
+  const allowPartial = argv.includes('--allow-partial');
+  const { rest, out: outOpt } = takeOutOption(argv.filter((a) => a !== '--allow-partial'));
+  const [file, outArg] = rest;
+  if (!file) usage('missing input file');
+
+  const buf = requireFileBuffer(file);
+
+  let magics = 0;
+  let at = 0;
+  while (true) {
+    at = buf.indexOf(ZSTD_MAGIC, at);
+    if (at < 0) break;
+    magics += 1;
+    at += 4;
   }
-}
-console.log('frames', frames, 'total bytes', total);
-if (chunks.length) {
-  const all = Buffer.concat(chunks).toString('utf8');
-  fs.writeFileSync(process.argv[3] || 'zdump.raw.txt', all, 'utf8');
-  console.log('sample:', all.slice(0, 300));
+  console.log('file size', buf.length, 'magic count', magics);
+
+  const decoded = decodeZstdFrames(buf, { allowPartial });
+  console.log(
+    'frames', decoded.frames,
+    'total bytes', decoded.text.length,
+    'consumed', `${decoded.consumed}/${buf.length}`,
+    'offsets', decoded.frameOffsets.slice(0, 10),
+  );
+  if (magics > decoded.frameOffsets.length) {
+    console.log(
+      `note: ${magics - decoded.frameOffsets.length} magic byte sequence(s) are not frame starts ` +
+        '(they sit inside compressed blocks)',
+    );
+  }
+
+  if (decoded.chunks.length) {
+    const outFile = outOpt || outArg || 'zdump.raw.txt';
+    fs.writeFileSync(outFile, decoded.text, 'utf8');
+    console.log('sample:', decoded.text.slice(0, 300));
+    console.log('wrote', outFile);
+  }
+  if (!decoded.complete) {
+    console.error(
+      `warning: stopped at offset ${decoded.stoppedAt} (${decoded.cause}); ` +
+        `${buf.length - decoded.consumed} byte(s) undecoded`,
+    );
+  }
+} catch (e) {
+  if (e instanceof UsageError) usage(e.message);
+  if (e instanceof ZstdFrameError) {
+    console.error(`error: ${e.message}`);
+    process.exit(1);
+  }
+  throw e;
 }

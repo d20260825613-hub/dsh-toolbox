@@ -19,20 +19,36 @@ import { spawnSync } from 'node:child_process';
 import https from 'node:https';
 import fs from 'node:fs';
 import { connectTunnel, withTunnelRetry } from './gh-tunnel.js';
+import { numberOption, parseOptions } from './cli-flags.mjs';
 
 // GitHub CLI's public OAuth app client id (device flow enabled).
 const CLIENT_ID = '178c6fc778ccc68e1d6a';
 const GH = 'D:\\dsh\\_tools\\gh\\bin\\gh.exe';
 
-const args = process.argv.slice(2);
-const flag = (name, fallback) => {
-  const i = args.indexOf(name);
-  return i === -1 ? fallback : args[i + 1];
-};
-const store = args.includes('--store');
-const scopes = flag('--scopes', 'repo,workflow,read:org');
-const intervalOverride = Number(flag('--interval', '0')) || 0;
-const maxWaitMs = Number(flag('--max-wait', '10')) * 60 * 1000;
+const USAGE = 'usage: node gh-device-login.js [--scopes repo,workflow,read:org] [--max-wait 10] [--interval N] [--challenge <file>] [--store]';
+
+let options;
+try {
+  // `--store` is the only boolean option; everything else needs a value, and a
+  // missing one is an error instead of the previous silent `undefined`/NaN.
+  ({ options } = parseOptions(process.argv.slice(2), ['--store']));
+} catch (e) {
+  console.error(`error: ${e.message}`);
+  console.error(USAGE);
+  process.exit(2);
+}
+
+const store = options.has('--store');
+const scopes = options.get('--scopes') || 'repo,workflow,read:org';
+const intervalOverride = numberOption(options, '--interval', 0, { min: 0 });
+let maxWaitMs;
+try {
+  maxWaitMs = numberOption(options, '--max-wait', 10, { min: 0.1 }) * 60 * 1000;
+} catch (e) {
+  console.error(`error: ${e.message}`);
+  console.error(USAGE);
+  process.exit(2);
+}
 
 /** POST a form to github.com through a fresh CONNECT tunnel. */
 async function postForm(path, params) {
@@ -91,7 +107,7 @@ async function main() {
 
   // Persist the challenge immediately: a caller reading the job log later still
   // needs the code, and the polling below can run for minutes.
-  const challengePath = flag('--challenge', 'D:\\dsh\\_tools\\gh-device-challenge.txt');
+  const challengePath = options.get('--challenge') || 'D:\\dsh\\_tools\\gh-device-challenge.txt';
   fs.writeFileSync(
     challengePath,
     `url=${dc.verification_uri}\ncode=${dc.user_code}\nscopes=${scopes}\nexpires_in=${dc.expires_in}\n`,
@@ -123,8 +139,8 @@ async function main() {
     );
     const b = res.body;
     if (b.access_token) {
-      console.log('[login] SUCCESS — token received after ' + pollCount + ' poll(s).');
-      console.log('[login] scopes: ' + (b.scope || '(none reported)'));
+      console.error('[login] SUCCESS — token received after ' + pollCount + ' poll(s).');
+      console.error('[login] scopes: ' + (b.scope || '(none reported)'));
       if (store) {
         const r = spawnSync(GH, ['auth', 'login', '--hostname', 'github.com', '--with-token'], {
           input: b.access_token,

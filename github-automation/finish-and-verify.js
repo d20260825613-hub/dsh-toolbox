@@ -26,14 +26,25 @@ function run(tool, args, { cwd, allowFail = false } = {}) {
 
 // 1. commit and push the nameplate finishing touches ------------------------
 const nameplate = 'D:\\dsh\\nameplate';
+let failed = 0;
 run('git', ['add', '-A'], { cwd: nameplate });
 const staged = run('git', ['diff', '--cached', '--name-only'], { cwd: nameplate }).stdout.trim();
 if (staged) {
   run('git', ['commit', '-m', 'docs: contribute, conduct and security policies'], { cwd: nameplate });
   console.log(`nameplate: committed ${staged.split('\n').length} file(s)`);
 }
-run('git', ['push', 'origin', 'main'], { cwd: nameplate, allowFail: true });
-console.log('nameplate: pushed');
+// allowFail keeps the verification below running, but the exit code has to
+// reflect the failure: printing "pushed" for a rejected or unauthenticated push
+// is how a broken release was reported as a successful one.
+const push = run('git', ['push', 'origin', 'main'], { cwd: nameplate, allowFail: true });
+if (push.error || push.status !== 0) {
+  failed += 1;
+  console.error(`nameplate: push FAILED (exit ${push.status ?? 'spawn error'})`);
+  const detail = (push.error?.message ?? push.stderr ?? push.stdout ?? '').trim();
+  if (detail) console.error(detail.slice(0, 400));
+} else {
+  console.log('nameplate: pushed');
+}
 
 // 2. verify every repository ------------------------------------------------
 const PROJECTS = ['spacehog', 'lockbox', 'qwq', 'sumcheck', 'jsonl', 'speck'];
@@ -45,6 +56,7 @@ for (const name of PROJECTS) {
     repo = JSON.parse(run('gh', ['repo', 'view', slug, '--json', 'name,description,repositoryTopics,url']).stdout);
   } catch (error) {
     console.log(`${name.padEnd(10)} UNREACHABLE: ${error.message.slice(0, 80)}`);
+    failed += 1;
     continue;
   }
   let files = '?';
@@ -58,3 +70,9 @@ for (const name of PROJECTS) {
     `${name.padEnd(10)} files=${String(files).padStart(3)} topics=${String((repo.repositoryTopics ?? []).length).padStart(2)}  ${(repo.description ?? '(none)').slice(0, 62)}`,
   );
 }
+
+if (failed > 0) {
+  console.error(`\n${failed} step(s) failed`);
+  process.exit(1);
+}
+console.log('\nall good');

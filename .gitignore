@@ -1,0 +1,21 @@
+# Token / credential material (README section 四 promises these never enter the repo)
+gh-token.txt
+*.token
+.env
+.env.*
+*.pem
+*.key
+cookies*.txt
+*-challenge.txt
+
+# Browser profiles used by the headless Edge probes
+edge-direct/
+edge-profile/
+
+# Scratch output dropped by the agent-inspectors z* tools when run with no -o
+zdump.out.txt
+zdump.raw.txt
+
+# Temporary JSON written next to the scripts
+.repo-*.json
+.topics-*.json

@@ -17,7 +17,9 @@
  *   node gh-tunnel.js POST /repos/OWNER/REPO/git/blobs @body.json
  *   node gh-tunnel.js GET  /rate_limit --token <token>
  *
- * The token comes from $GITHUB_TOKEN, then --token, then `gh auth token`.
+ * The token comes from $GITHUB_TOKEN, then $GH_TOKEN, then --token, then
+ * `gh auth token` (publish-to-github.mjs uses GH_TOKEN first; both names work
+ * everywhere so a caller never has to guess which one a script wants).
  * GH_TUNNEL_DEBUG=1 prints the tunnel steps.
  */
 
@@ -95,7 +97,8 @@ export async function withTunnelRetry(fn, { attempts = 3, label = 'request' } = 
 
 /** Return the token to authenticate with, or null when none is available. */
 export function resolveToken(explicit) {
-  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN.trim();
+  const fromEnv = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  if (fromEnv) return fromEnv.trim();
   const idx = process.argv.indexOf('--token');
   const fromArg = explicit || (idx !== -1 ? process.argv[idx + 1] : null);
   if (fromArg) return fromArg.trim();

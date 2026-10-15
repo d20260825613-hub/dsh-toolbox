@@ -83,8 +83,12 @@ if (!remotes.includes('origin')) {
   run(GIT, ['remote', 'add', 'origin', `https://github.com/${slug}.git`]);
 }
 const push = run(GIT, ['push', '-u', 'origin', 'main'], { allowFail: true });
-if (push.status !== 0 && /rejected|non-fast-forward/.test(push.stderr ?? '')) {
-  throw new Error('push rejected: the remote has commits this checkout does not');
+// Classifying by error text let every other failure through: a 401, a dead proxy
+// or a protected branch all ended up printing "pushed main" and then editing the
+// remote metadata. The exit code is the only reliable signal.
+if (push.error || push.status !== 0) {
+  const detail = (push.error?.message ?? push.stderr ?? push.stdout ?? '').trim().slice(0, 300);
+  throw new Error(`git push failed (exit ${push.status ?? 'spawn error'}): ${detail}`);
 }
 console.log('  pushed main');
 

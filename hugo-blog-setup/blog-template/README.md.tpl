@@ -85,7 +85,6 @@ blog/
 ├─ wrangler.toml          ★ Cloudflare Pages 项目配置（name = 域名前缀）
 ├─ deploy.ps1             ★ 一键部署：hugo 构建 + wrangler 上传
 ├─ run-deploy.cmd         双击入口（自动放行脚本执行策略 + 结束后暂停）
-├─ run-bootstrap.cmd      双击入口（环境初始化）
 ├─ archetypes/default.md  新文章模板
 ├─ content/
 │  ├─ posts/              所有文章放这里
@@ -99,6 +98,9 @@ blog/
 ├─ themes/PaperMod/       主题（Git 子模块）
 └─ public/                构建产物（每次部署时重新生成，可随时删除）
 ```
+
+> 环境初始化入口 `run-bootstrap.cmd` 不在这里：它在**上一级安装目录**里（和 `bootstrap.ps1` 一起），
+> 只有第一次搭环境时才用得到。博客目录里没有它，也不需要有。
 
 ---
 
@@ -169,7 +171,7 @@ TocOpen: false                     # 目录是否默认展开
 
 | 现象 | 原因 / 解决 |
 | --- | --- |
-| 双击 `.ps1` 一闪而过 | 改用 `run-deploy.cmd` / `run-bootstrap.cmd`（已加 `-ExecutionPolicy Bypass` 并会暂停） |
+| 双击 `.ps1` 一闪而过 | 改用 `run-deploy.cmd`（已加 `-ExecutionPolicy Bypass` 并会暂停）；环境初始化入口在上一级安装目录的 `run-bootstrap.cmd` |
 | `无法加载文件，因为在此系统上禁止运行脚本` | 同上；或执行 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | `wrangler : 无法将"wrangler"项识别为 cmdlet` | 重开 PowerShell 窗口；或 `npm install -g wrangler` |
 | `You are not authenticated` | 执行一次 `wrangler login` |

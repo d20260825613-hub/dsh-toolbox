@@ -9,11 +9,21 @@
  */
 
 import { apiRequest, resolveToken } from './gh-tunnel.js';
+import { numberOption, parseOptions } from './cli-flags.mjs';
 
-const args = process.argv.slice(2);
-const sha = args.find((a) => !a.startsWith('--')) || 'HEAD';
-const tIdx = args.indexOf('--timeout-min');
-const timeoutMin = tIdx === -1 ? 20 : Number(args[tIdx + 1]);
+let args;
+let timeoutMin;
+try {
+  // The sha is the only positional argument; --timeout-min takes a value.
+  const parsed = parseOptions(process.argv.slice(2), []);
+  args = parsed.positionals;
+  timeoutMin = numberOption(parsed.options, '--timeout-min', 20, { min: 1 });
+} catch (e) {
+  console.error(`error: ${e.message}`);
+  console.error('usage: node ci-watch.js [sha] [--timeout-min 20]');
+  process.exit(2);
+}
+const sha = args[0] || 'HEAD';
 
 const TOKEN = resolveToken();
 const REPO = 'd20260825613-hub/spacehog';

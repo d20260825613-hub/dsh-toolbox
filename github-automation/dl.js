@@ -28,6 +28,12 @@ if (argv.length < 2) {
   console.error('       node dl.js --asset <owner/repo> <nameSubstring> <outFile>');
   process.exit(2);
 }
+if (argv[0] === '--asset' && argv.length < 4) {
+  // The url form only needs two arguments, so the --asset form used to pass the
+  // generic check with outFile undefined and then die inside createWriteStream.
+  console.error('usage: node dl.js --asset <owner/repo> <nameSubstring> <outFile>');
+  process.exit(2);
+}
 
 const token = resolveToken();
 

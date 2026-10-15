@@ -13,19 +13,34 @@ import https from 'node:https';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { connectTunnel, withTunnelRetry } from './gh-tunnel.js';
+import { numberOption, parseOptions } from './cli-flags.mjs';
 
 const CLIENT_ID = '178c6fc778ccc68e1d6a';
 const GH = 'D:\\dsh\\_tools\\gh\\bin\\gh.exe';
 const CHALLENGE = 'D:\\dsh\\_tools\\gh-device-challenge.txt';
 const TOKEN_FILE = 'D:\\dsh\\_tools\\gh-token.txt';
 
-const args = process.argv.slice(2);
-const flag = (name, fallback) => {
-  const i = args.indexOf(name);
-  return i === -1 ? fallback : args[i + 1];
-};
-const store = args.includes('--store');
-const maxWaitMs = Number(flag('--max-wait', '15')) * 60 * 1000;
+const USAGE = 'usage: node gh-device-poll.js [--max-wait 15] [--store]';
+
+let options;
+try {
+  ({ options } = parseOptions(process.argv.slice(2), ['--store']));
+} catch (e) {
+  console.error(`error: ${e.message}`);
+  console.error(USAGE);
+  process.exit(2);
+}
+const store = options.has('--store');
+// `--max-wait` with no value used to become NaN, so the poll loop was skipped
+// entirely and the script only ever printed "gave up after NaN minutes".
+let maxWaitMs;
+try {
+  maxWaitMs = numberOption(options, '--max-wait', 15, { min: 0.1 }) * 60 * 1000;
+} catch (e) {
+  console.error(`error: ${e.message}`);
+  console.error(USAGE);
+  process.exit(2);
+}
 
 const challenge = Object.fromEntries(
   fs
