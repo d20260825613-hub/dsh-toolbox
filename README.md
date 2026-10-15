@@ -26,6 +26,14 @@
 | `dl.js` | 走反代下载 GitHub 文件（`gh-proxy.com` 前缀拼装 + 重试） |
 | `probe-*.js` / `dump-device-form.js` / `find-delete-form.js` / `fill-token-form.js` / `click-token-delete.js` | 用无头 Edge 排查 GitHub 页面表单（设备码、token 删除流程）的探针 |
 | `check-epipe.js` / `probe-req-close.js` | 排查 Node 子进程管道 EPIPE、请求提前关闭这类环境噪声 |
+| `publish-to-github.mjs` | **在不支持 `git push` 的机器上发布仓库**：api.github.com 可达而 github.com 被墙时，用 Git Data API（blobs → tree → commit → ref）一次提交推上完整目录，并自动建仓库、写描述与 topics。新仓库要先 bootstrap 一次提交，否则 GitHub 会对建 blob 返回 409 "Git Repository is empty" |
+| `check-repos.mjs` | 发布后审计：列出仓库里可疑的二进制/垃圾文件（.exe/.zip/.log/日志目录等） |
+
+> **一个实测结论**：这台机器上 `github.com:443` 被重置，但 `api.github.com`、`raw.githubusercontent.com`、
+> `codeload.github.com`、`objects.githubusercontent.com` **都能直连**，而且直连时 Authorization 是被真正校验的
+> （拿无效 token 请求 `/user` 返回 401）。所以"GitHub 完全不可用"是错的——**不能用的是网页与 git 协议，能用的是 API**。
+> 相比之下，第三方反代 `gh-proxy.com` 的 API 通道会**用反代自己的账号**发请求（拿无效 token 请求 `/user` 竟然返回
+> 另一个用户 `aeroheaven1` 的资料），因此**绝不能用它提交代码或传 token**。
 
 **用法要点**：这些脚本需要你自己提供 token（设备码登录或已有的 PAT），
 仓库里只有"怎么拿到、怎么用、怎么吊销"的代码，没有任何凭据。
